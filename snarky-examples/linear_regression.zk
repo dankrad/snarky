@@ -72,13 +72,13 @@ let main = fun(x1 : field, x2 : field, y1 : field, y2 : field, ()) => {
   // Compute means
   let x_cap = mean(x); 
   let y_cap = mean(y);
-  let jfd = Prover {
+  as_prover( Prover {
     print_string("Mean of x values: ");
     print_endline(Field.to_string(x_cap));
 
     print_string("Mean of y values: ");
     print_endline(Field.to_string(y_cap));
-  };
+  } );
   let x_m: list#2(field) = List.map(fun (xi) => { Field.( - )(xi, x_cap); }, x);
   let y_m: list#2(field) = List.map(fun (yi) => { Field.( - )(yi, y_cap); }, y);
 
@@ -93,21 +93,26 @@ let main = fun(x1 : field, x2 : field, y1 : field, y2 : field, ()) => {
   let denominator_prered = sum(List.map2(fun (x_1, x_2) => { Field.( * )(x_1, x_2); }, x_m, x_m));
   let denominator = reduce(inner_precision + decimal_point, inner_precision, denominator_prered);
 
-  let jskfdanfd = Prover {
+  as_prover( Prover {
     print_string("m numerator: ");
     print_endline(Field.to_string(numerator));
 
     print_string("m denominator: ");
     print_endline(Field.to_string(denominator));
-  };
-
+  } );
 
   let m = division(numerator, denominator);
   let b = Field.( - )(y_cap, Field.( * ) (m, x_cap));
   as_prover( Prover {
+    let two_to_the_prover : int -> field = fun (n) => {
+      Big_int.shift_left_big_int(Big_int.unit_big_int, n)
+      |> Big_int.string_of_big_int
+      |> Field.of_string;
+    };
+
     let fixed_point_to_string = fun(x: field) => {
-      let positive = Field.( + )(x, two_to_the(decimal_point));
-      let positive_float = Float.of_string(Field.to_string(positive)) - float(2i)**float(decimal_point);
+      let positive = Field.( + )(x, two_to_the_prover(inner_precision));
+      let positive_float = Float.sub(Float.of_string(Field.to_string(positive)), float(2i)**float(inner_precision));
       let f: float = Float.div(positive_float, float(2i)**float(decimal_point));
       Float.to_string(f);
     };
@@ -118,8 +123,6 @@ let main = fun(x1 : field, x2 : field, y1 : field, y2 : field, ()) => {
 
     print_string("b = ");
     print_endline(fixed_point_to_string(b));
-
-    print_endline(Float.to_string(Float.div(float(1i), float(2i))));
   } );
 
   ();
