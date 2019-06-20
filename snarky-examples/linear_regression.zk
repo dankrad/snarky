@@ -53,12 +53,16 @@ let division = fun(a : field, b : field) => {
     Field.Assert.lte(~bit_length=inner_precision, r, b);
     assert_r1(b, x, Field.( - )(Field.( * )(a, two_to_the(decimal_point)), r));
 
-    let result = reduce(inner_precision + decimal_point, inner_precision, x);
-    (result);
+    (x);
 };
 
 let mean = fun( l : list(field)) : field => {
-	division(sum(l), Field.of_int(List.length(l)));
+	division(sum(l), Field.(*)(Field.of_int(List.length(l)), two_to_the(decimal_point)));
+};
+
+let bla = Prover {
+
+  ();
 };
 
 let main = fun(x1 : field, x2 : field, y1 : field, y2 : field, ()) => {
@@ -100,14 +104,23 @@ let main = fun(x1 : field, x2 : field, y1 : field, y2 : field, ()) => {
 
   let m = division(numerator, denominator);
   let b = Field.( - )(y_cap, Field.( * ) (m, x_cap));
-  let gigs = Prover {
+  as_prover( Prover {
+    let fixed_point_to_string = fun(x: field) => {
+      let positive = Field.( + )(x, two_to_the(decimal_point));
+      let positive_float = Float.of_string(Field.to_string(positive)) - float(2i)**float(decimal_point);
+      let f: float = Float.div(positive_float, float(2i)**float(decimal_point));
+      Float.to_string(f);
+    };
+
     print_endline("y = m * x + b");
     print_string("m = ");
-    print_endline(Field.to_string(m));
+    print_endline(fixed_point_to_string(m));
 
     print_string("b = ");
-    print_endline(Field.to_string(b));
-  };
+    print_endline(fixed_point_to_string(b));
+
+    print_endline(Float.to_string(Float.div(float(1i), float(2i))));
+  } );
 
   ();
 };
