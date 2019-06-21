@@ -1,11 +1,10 @@
 let input_precision = 32i;
 let inner_precision = 40i; // Needs to be large enough to hold all the sums
 let decimal_point = 16i;
-let number_of_points = 2i;
-
+let number_of_points = 8i;
 
 let sum = fun( l : list(field)) : field => {
-	List.fold_left(Field.(+))(0)(l);
+	List.fold_left(Field.( + ))(0)(l);
 	// potential overflow check for large lists
 };
 
@@ -15,8 +14,7 @@ let two_to_the : int -> field = fun (n) => {
   |> Field.of_string;
 };
 
-let to_bits_signed = fun(length: int, x: field) => {
-  let y = Field.( + )(x, two_to_the(length - 1i));
+let to_bits = fun(length: int, x: field) => {
   let bits = Field.to_bits(~length=length, x);
   bits;
 };
@@ -37,19 +35,31 @@ let take = fun (n, xs) => {
 };
 
 let reduce = fun(length_before: int, length_after: int, x: field) => {
-  let bits = List.rev(take(length_after, List.rev(to_bits_signed(length_before, x))));
-  Field.of_bits(bits);
+  let y = Field.( + )(x, two_to_the(length_before));
+  let bits = List.rev(take(length_after + 1i, List.rev(to_bits(length_before + 1i, y))));
+  Field.( - )(Field.of_bits(bits), two_to_the(length_after));
 };
 
 let division = fun(a : field, b : field) => {
 	let (x, r) = Prover {
-      let a = Big_int.mult_big_int (Big_int.big_int_of_string(Field.to_string(a)), Big_int.power_int_positive_int(2i, decimal_point));
+      let two_to_the_prover : int -> field = fun (n) => {
+        Big_int.shift_left_big_int(Big_int.unit_big_int, n)
+        |> Big_int.string_of_big_int
+        |> Field.of_string;
+      };
+
+      let positive_a = Field.( + )(a, two_to_the_prover(inner_precision));
+      let a = Big_int.mult_big_int (Big_int.sub_big_int(Big_int.big_int_of_string(Field.to_string(positive_a)), Big_int.power_int_positive_int(2i, inner_precision)), Big_int.power_int_positive_int(2i, decimal_point));
       let b = Big_int.big_int_of_string(Field.to_string(b));
       let (x, r) = Big_int.quomod_big_int(a, b);
-      (Field.of_string(Big_int.string_of_big_int(x)), Field.of_string(Big_int.string_of_big_int(r)));
+      print_string("Division result: ");
+      print_endline(Big_int.string_of_big_int(x));
+      let field_x = if(x >= Big_int.big_int_of_string("0")) {(x);} else {Big_int.add_big_int(x, Big_int.big_int_of_string("21888242871839275222246405745257275088548364400416034343698204186575808495617"));};
+      (Field.of_string(Big_int.string_of_big_int(field_x)), Field.of_string(Big_int.string_of_big_int(r)));
     };
     
-    let bits = to_bits_signed(inner_precision, x);
+    let y = Field.( + )(x, two_to_the(inner_precision));
+    let bits = to_bits(inner_precision + 1i, y);
     Field.Assert.lte(~bit_length=inner_precision, r, b);
     assert_r1(b, x, Field.( - )(Field.( * )(a, two_to_the(decimal_point)), r));
 
@@ -60,14 +70,12 @@ let mean = fun( l : list(field)) : field => {
 	division(sum(l), Field.(*)(Field.of_int(List.length(l)), two_to_the(decimal_point)));
 };
 
-let bla = Prover {
+let main = fun(x1 : field, x2 : field, x3 : field, x4 : field, x5 : field, x6 : field, x7 : field, x8 : field,
+               y1 : field, y2 : field, y3 : field, y4 : field, y5 : field, y6 : field, y7 : field, y8 : field,
+               ()) => {
 
-  ();
-};
-
-let main = fun(x1 : field, x2 : field, y1 : field, y2 : field, ()) => {
-  let x : list#2(field) = [x1, x2];
-  let y : list#2(field) = [y1, y2];
+  let x : list#8(field) = [x1, x2, x3, x4, x5, x6, x7, x8];
+  let y : list#8(field) = [y1, y2, y3, y4, y5, y6, y7, y8];
 
   // Compute means
   let x_cap = mean(x); 
@@ -79,8 +87,8 @@ let main = fun(x1 : field, x2 : field, y1 : field, y2 : field, ()) => {
     print_string("Mean of y values: ");
     print_endline(Field.to_string(y_cap));
   } );
-  let x_m: list#2(field) = List.map(fun (xi) => { Field.( - )(xi, x_cap); }, x);
-  let y_m: list#2(field) = List.map(fun (yi) => { Field.( - )(yi, y_cap); }, y);
+  let x_m: list#8(field) = List.map(fun (xi) => { Field.( - )(xi, x_cap); }, x);
+  let y_m: list#8(field) = List.map(fun (yi) => { Field.( - )(yi, y_cap); }, y);
 
   //List.iter(fun(xi: field) => { Prover {
   //  print_string("x_m numerator: ");
@@ -94,15 +102,22 @@ let main = fun(x1 : field, x2 : field, y1 : field, y2 : field, ()) => {
   let denominator = reduce(inner_precision + decimal_point, inner_precision, denominator_prered);
 
   as_prover( Prover {
+    print_string("m numerator prered: ");
+    print_endline(Field.to_string(numerator_prered));
+
     print_string("m numerator: ");
     print_endline(Field.to_string(numerator));
+
+    print_string("m denominator prered: ");
+    print_endline(Field.to_string(denominator_prered));
 
     print_string("m denominator: ");
     print_endline(Field.to_string(denominator));
   } );
 
   let m = division(numerator, denominator);
-  let b = Field.( - )(y_cap, Field.( * ) (m, x_cap));
+  let inter_unreduced = Field.( * ) (m, x_cap);
+  let b = Field.( - )(y_cap, reduce(inner_precision + decimal_point, inner_precision, inter_unreduced));
   as_prover( Prover {
     let two_to_the_prover : int -> field = fun (n) => {
       Big_int.shift_left_big_int(Big_int.unit_big_int, n)
